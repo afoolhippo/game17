@@ -5,15 +5,15 @@
 
   --bg1:#ffb36b;
   --bg2:#d67b88;
-  --bg3:#5c5470;
+  --bg3:#524864;
 
-  --panel:#2c2438;
-  --line:#f2c078;
+  --panel:#2d2538;
+  --line:#f0c078;
 
-  --text:#ffe7c7;
+  --text:#ffe8c9;
 
   --accent:#b84d5d;
-  --accent2:#f08d6f;
+  --accent2:#ef8d6f;
 }
 
 *{
@@ -25,8 +25,10 @@ html,
 body{
   margin:0;
   padding:0;
+
   width:100%;
   height:100%;
+
   overflow:hidden;
 
   font-family:'DotGothic16', monospace;
@@ -75,22 +77,25 @@ button{
 
 .titleVisual{
   width:min(92vw,460px);
+
+  cursor:pointer;
 }
 
 .titleVisual img{
   width:100%;
   display:block;
 
-  border:4px solid #221b2c;
+  border:4px solid #241d2f;
+
   image-rendering:pixelated;
 }
 
 .titleText{
   width:min(92vw,460px);
 
-  text-align:center;
-
   margin-top:10px;
+
+  text-align:center;
 
   background:rgba(0,0,0,0.28);
 
@@ -101,12 +106,15 @@ button{
 
 .titleText h1{
   margin:0 0 10px;
+
   font-size:38px;
 }
 
 .titleText p{
   margin:0 0 18px;
+
   line-height:1.7;
+
   font-size:16px;
 }
 
@@ -144,7 +152,7 @@ button{
 
   border:2px solid var(--line);
 
-  background:#2c2438;
+  background:#2d2538;
 
   color:var(--text);
 
@@ -158,15 +166,7 @@ button{
 
   height:min(calc(var(--app-height) - 170px),560px);
 
-  background:
-  linear-gradient(
-    to bottom,
-    #ffb36b 0%,
-    #d67b88 40%,
-    #4f455d 100%
-  );
-
-  border:4px solid #221b2c;
+  border:4px solid #241d2f;
 
   image-rendering:pixelated;
 }
@@ -174,11 +174,11 @@ button{
 .message{
   width:min(95vw,430px);
 
-  text-align:center;
+  height:24px;
 
   margin:6px 0;
 
-  height:24px;
+  text-align:center;
 
   color:#ffd7a8;
 
@@ -186,7 +186,7 @@ button{
 }
 
 .mainBtn{
-  border:3px solid #221b2c;
+  border:3px solid #241d2f;
 
   background:var(--accent);
 
@@ -196,12 +196,13 @@ button{
 
   font-size:18px;
 
-  box-shadow:4px 4px 0 rgba(0,0,0,0.3);
+  box-shadow:4px 4px 0 rgba(0,0,0,0.28);
 }
 
 .mainBtn:active{
   transform:translate(2px,2px);
-  box-shadow:2px 2px 0 rgba(0,0,0,0.3);
+
+  box-shadow:2px 2px 0 rgba(0,0,0,0.28);
 }
 
 .dropBtn{
@@ -218,16 +219,16 @@ button{
 /* 結果 */
 
 #resultScreen{
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
 
-  padding:16px;
+  padding:24px 16px 16px;
 }
 
 .resultBox{
   width:min(92vw,420px);
 
-  background:rgba(0,0,0,0.35);
+  background:rgba(0,0,0,0.32);
 
   border:4px solid var(--line);
 
@@ -238,22 +239,26 @@ button{
 
 .resultBox h2{
   margin:0 0 14px;
+
   font-size:32px;
 }
 
 #resultScoreEl{
   font-size:24px;
+
   margin:10px 0;
 }
 
 #resultCommentEl{
   line-height:1.7;
+
   margin:10px 0 20px;
 }
 
 .resultButtons{
   display:flex;
   flex-direction:column;
+
   gap:10px;
 }
 

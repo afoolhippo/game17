@@ -6,6 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
+
   <title>夕暮れメダル</title>
 
   <link rel="stylesheet" href="style.css" />
@@ -22,6 +23,7 @@
     </div>
 
     <div class="titleText">
+
       <h1>夕暮れメダル</h1>
 
       <p>
@@ -32,6 +34,7 @@
       <button id="startBtn" class="mainBtn">
         タップしてスタート
       </button>
+
     </div>
 
   </section>
@@ -40,15 +43,26 @@
   <section id="gameScreen" class="screen">
 
     <div class="hud">
-      <div>GET <span id="scoreEl">0</span></div>
-      <div>残り <span id="timeEl">60</span>秒</div>
+
+      <div>
+        GET <span id="scoreEl">0</span>
+      </div>
+
+      <div>
+        残り <span id="timeEl">60</span>秒
+      </div>
+
     </div>
 
     <button id="backBtn" class="backBtn">
       タイトルへ
     </button>
 
-    <canvas id="gameCanvas" width="360" height="520"></canvas>
+    <canvas
+      id="gameCanvas"
+      width="360"
+      height="520"
+    ></canvas>
 
     <div id="messageEl" class="message">
       …
@@ -65,9 +79,13 @@
 
     <div class="resultBox">
 
-      <h2 id="rankEl">夕暮れ部員</h2>
+      <h2 id="rankEl">
+        夕暮れ部員
+      </h2>
 
-      <p id="resultScoreEl">GET 0枚</p>
+      <p id="resultScoreEl">
+        GET 0枚
+      </p>
 
       <p id="resultCommentEl">
         今日もメダルを落とした。
@@ -96,5 +114,6 @@
 </div>
 
 <script src="game.js"></script>
+
 </body>
 </html>
