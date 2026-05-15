@@ -46,7 +46,6 @@ const GAME_URL = "https://afoolhippo.github.io/game17/";
 const MEDAL_R = 15;
 
 const TABLE_TOP = 175;
-const TABLE_BOTTOM = 390;
 const GET_LINE = 404;
 
 let medals = [];
@@ -93,7 +92,6 @@ function resetGame(){
 
   updateHud();
 
-  // 下層メダル。最初から台にそこそこ詰まっている
   for(let i = 0; i < 42; i++){
     medals.push({
       x: 60 + Math.random() * 240,
@@ -177,7 +175,6 @@ function dropMedal(){
     canDrop = true;
   }, 120);
 
-  // 後入れメダルは上層に積もる
   medals.push({
     x: 90 + Math.random() * 180,
     y: 42,
@@ -232,13 +229,16 @@ function updateMedals(dt){
     if(m.y < TABLE_TOP){
       m.vy += 0.12 * dt;
     }else{
-      // 着地後、後入れメダルはしばらく上層に残る
       if(m.fresh){
-        m.z = Math.max(m.z, 3.3);
-      }
+        // 後から入れたメダルは上層に残り、少しずつ沈む
+        m.z *= 0.996;
 
-      // 時間経過で少しだけ沈む
-      m.z *= 0.998;
+        if(m.z < 2.2){
+          m.fresh = false;
+        }
+      }else{
+        m.z *= 0.998;
+      }
     }
 
     m.y += m.vy * dt;
@@ -247,11 +247,11 @@ function updateMedals(dt){
     m.vx *= 0.96;
     m.vy *= 0.94;
 
-    // プッシャーが奥から手前へ出るとき、奥側だけ押す
+    // プッシャーが直接押すのは下層メダルだけ
     const pushZoneTop = TABLE_TOP + 8;
     const pushZoneBottom = TABLE_TOP + 92;
 
-    if(m.y > pushZoneTop && m.y < pushZoneBottom){
+    if(!m.fresh && m.y > pushZoneTop && m.y < pushZoneBottom){
       m.vy += pushStrength * 0.075 * dt;
     }
 
@@ -310,14 +310,12 @@ function pushApart(a, b){
     a.vy += ny * force * 2.2;
     b.vy -= ny * force * 2.2;
 
-    // 前後方向に少し押し出しやすくする
     if(a.y < b.y){
       b.vy += 0.035;
     }else{
       a.vy += 0.035;
     }
 
-    // 上層メダルは少し上に残る
     if(a.fresh) a.z = Math.max(a.z, 3.1);
     if(b.fresh) b.z = Math.max(b.z, 3.1);
   }
@@ -456,7 +454,6 @@ function drawMedal(m){
   ctx.textAlign = "center";
   ctx.fillText("M", m.x, drawY + 4);
 
-  // 後入れ上層メダルはハイライトを少し強める
   if(m.fresh){
     ctx.strokeStyle = "rgba(255,255,255,0.42)";
     ctx.lineWidth = 2;
