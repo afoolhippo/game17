@@ -1,3 +1,4 @@
+/* style.css */
 @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
 
 :root{
@@ -77,7 +78,6 @@ button{
 
 .titleVisual{
   width:min(92vw,460px);
-
   cursor:pointer;
 }
 
@@ -106,15 +106,12 @@ button{
 
 .titleText h1{
   margin:0 0 10px;
-
   font-size:38px;
 }
 
 .titleText p{
   margin:0 0 18px;
-
   line-height:1.7;
-
   font-size:16px;
 }
 
@@ -169,6 +166,8 @@ button{
   border:4px solid #241d2f;
 
   image-rendering:pixelated;
+
+  background:#2d2538;
 }
 
 .mainBtn{
@@ -187,7 +186,6 @@ button{
 
 .mainBtn:active{
   transform:translate(2px,2px);
-
   box-shadow:2px 2px 0 rgba(0,0,0,0.28);
 }
 
@@ -210,7 +208,9 @@ button{
   align-items:flex-start;
   justify-content:center;
 
-  padding:24px 16px 16px;
+  overflow-y:auto;
+
+  padding:18px 16px 16px;
 }
 
 .resultBox{
@@ -220,27 +220,45 @@ button{
 
   border:4px solid var(--line);
 
-  padding:22px 18px;
+  padding:18px 16px;
 
   text-align:center;
 }
 
 .resultBox h2{
-  margin:0 0 14px;
+  margin:0 0 10px;
 
-  font-size:32px;
+  font-size:30px;
+}
+
+.resultImage{
+  width:min(78vw,280px);
+
+  display:block;
+
+  margin:10px auto 12px;
+
+  border:4px solid #241d2f;
+
+  image-rendering:pixelated;
+
+  background:#000;
+
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,0.08),
+    0 10px 20px rgba(0,0,0,0.35);
 }
 
 #resultScoreEl{
   font-size:24px;
 
-  margin:10px 0;
+  margin:8px 0;
 }
 
 #resultCommentEl{
   line-height:1.7;
 
-  margin:10px 0 20px;
+  margin:8px 0 16px;
 }
 
 .resultButtons{
