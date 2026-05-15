@@ -88,16 +88,13 @@ const HOME_URL =
 const GAME_URL =
   "https://afoolhippo.github.io/game17/";
 
-const TABLE_TOP = 198;
-const GET_LINE = 398;
-
-const PUSHER_Y = 160;
-const PUSHER_H = 34;
-const PUSHER_W = 110;
-
 const MEDAL_R = 15;
 
-let objects = [];
+const TABLE_TOP = 175;
+const TABLE_BOTTOM = 390;
+const GET_LINE = 404;
+
+let medals = [];
 let popups = [];
 
 let score = 0;
@@ -110,10 +107,12 @@ let animationId = null;
 
 let lastTime = 0;
 
-let pusherX = 60;
-let pusherDir = 1;
+let pusherDepth = 0;
+let pusherForward = true;
 
 let canDrop = true;
+
+let lastFallSeTime = 0;
 
 function showScreen(screen){
 
@@ -132,30 +131,32 @@ function updateHud(){
 
 function resetGame(){
 
-  objects = [];
+  medals = [];
   popups = [];
 
   score = 0;
   timeLeft = 60;
 
-  pusherX = 60;
-  pusherDir = 1;
+  pusherDepth = 0;
+  pusherForward = true;
 
   updateHud();
 
-  // 最初からかなり前まで詰める
-  for(let i=0;i<38;i++){
+  // 最初からかなり積む
+  for(let i=0;i<44;i++){
 
-    objects.push({
+    medals.push({
 
       x:60 + Math.random()*240,
 
-      y:TABLE_TOP + 8 + Math.random()*170,
+      y:TABLE_TOP + 20 + Math.random()*160,
 
-      r:MEDAL_R,
+      z:Math.random()*2,
 
       vx:0,
-      vy:0
+      vy:0,
+
+      r:MEDAL_R
     });
   }
 }
@@ -261,19 +262,20 @@ function dropMedal(){
 
   setTimeout(()=>{
     canDrop = true;
-  },140);
+  },130);
 
-  objects.push({
+  medals.push({
 
     x:90 + Math.random()*180,
 
-    y:38,
+    y:42,
 
-    r:MEDAL_R,
+    z:0,
 
-    vx:(Math.random()-0.5)*0.4,
+    vx:(Math.random()-0.5)*0.5,
+    vy:0,
 
-    vy:0
+    r:MEDAL_R
   });
 }
 
@@ -298,72 +300,101 @@ function loop(now){
 
 function update(dt){
 
-  pusherX += pusherDir * 1.5 * dt;
+  // プッシャー前後運動
+  if(pusherForward){
 
-  if(pusherX > 205){
-    pusherDir = -1;
-  }
+    pusherDepth += 0.018 * dt;
 
-  if(pusherX < 45){
-    pusherDir = 1;
-  }
+    if(pusherDepth >= 1){
 
-  for(const obj of objects){
+      pusherDepth = 1;
 
-    if(obj.y < TABLE_TOP){
-
-      obj.vy += 0.11 * dt;
+      pusherForward = false;
     }
 
-    obj.y += obj.vy * dt;
-    obj.x += obj.vx * dt;
+  }else{
 
-    obj.vy *= 0.93;
-    obj.vx *= 0.95;
+    pusherDepth -= 0.013 * dt;
 
-    const pusherFront =
-      PUSHER_Y + PUSHER_H;
+    if(pusherDepth <= 0){
 
-    const hitPusher =
+      pusherDepth = 0;
 
-      obj.y > pusherFront - 6 &&
-      obj.y < pusherFront + 24 &&
-
-      obj.x > pusherX - 14 &&
-      obj.x < pusherX + PUSHER_W + 14;
-
-    if(hitPusher){
-
-      obj.y += 1.1 * dt;
-
-      obj.vy += 0.06 * dt;
-    }
-
-    if(obj.x < 42){
-      obj.x = 42;
-    }
-
-    if(obj.x > canvas.width - 42){
-      obj.x = canvas.width - 42;
+      pusherForward = true;
     }
   }
 
-  for(let i=0;i<objects.length;i++){
+  const pushStrength =
+    pusherForward
+    ? pusherDepth
+    : 0;
 
-    for(let j=i+1;j<objects.length;j++){
+  for(const m of medals){
+
+    if(m.y < TABLE_TOP){
+
+      m.vy += 0.12 * dt;
+    }
+
+    m.y += m.vy * dt;
+    m.x += m.vx * dt;
+
+    m.vx *= 0.96;
+    m.vy *= 0.94;
+
+    // 積み重なり感
+    if(m.y > TABLE_TOP){
+
+      m.z += 0.003 * dt;
+
+      if(m.z > 3){
+        m.z = 3;
+      }
+    }
+
+    // 奥→手前に押す
+    const pushZoneTop =
+      TABLE_TOP + 10;
+
+    const pushZoneBottom =
+      TABLE_TOP + 82;
+
+    if(
+      m.y > pushZoneTop &&
+      m.y < pushZoneBottom
+    ){
+
+      m.vy +=
+        pushStrength * 0.06 * dt;
+    }
+
+    if(m.x < 42){
+      m.x = 42;
+    }
+
+    if(m.x > canvas.width - 42){
+      m.x = canvas.width - 42;
+    }
+  }
+
+  // メダル同士押し合い
+  for(let i=0;i<medals.length;i++){
+
+    for(let j=i+1;j<medals.length;j++){
 
       pushApart(
-        objects[i],
-        objects[j]
+        medals[i],
+        medals[j]
       );
     }
   }
 
-  for(let i=objects.length-1;i>=0;i--){
+  // GET
+  for(let i=medals.length-1;i>=0;i--){
 
-    const obj = objects[i];
+    const m = medals[i];
 
-    if(obj.y > GET_LINE){
+    if(m.y > GET_LINE){
 
       score++;
 
@@ -371,23 +402,20 @@ function update(dt){
 
       playFall();
 
-      popups.push({
+      if(score % 10 === 0){
 
-        text:
-          score % 10 === 0
-          ? "残響RUSH"
-          : "GET!",
+        addPopup("残響RUSH");
 
-        x:180,
-        y:310,
+      }else if(score % 5 === 0){
 
-        life:42
-      });
+        addPopup(`${score}枚`);
+      }
 
-      objects.splice(i,1);
+      medals.splice(i,1);
     }
   }
 
+  // popup
   for(let i=popups.length-1;i>=0;i--){
 
     const p = popups[i];
@@ -397,6 +425,7 @@ function update(dt){
     p.y -= 0.4;
 
     if(p.life <= 0){
+
       popups.splice(i,1);
     }
   }
@@ -416,7 +445,7 @@ function pushApart(a,b){
   if(dist > 0 && dist < min){
 
     const force =
-      (min - dist) * 0.04;
+      (min - dist) * 0.05;
 
     const nx = dx / dist;
     const ny = dy / dist;
@@ -424,16 +453,48 @@ function pushApart(a,b){
     a.vx += nx * force;
     b.vx -= nx * force;
 
-    a.vy += ny * force * 2.2;
-    b.vy -= ny * force * 2.2;
+    a.vy += ny * force * 2.4;
+    b.vy -= ny * force * 2.4;
+
+    // 前列を押し出す
+    if(a.y < b.y){
+
+      b.vy += 0.03;
+
+    }else{
+
+      a.vy += 0.03;
+    }
   }
+}
+
+function addPopup(text){
+
+  popups.push({
+
+    text:text,
+
+    x:180,
+    y:300,
+
+    life:42
+  });
 }
 
 function playFall(){
 
+  const now = performance.now();
+
+  if(now - lastFallSeTime < 220){
+    return;
+  }
+
+  lastFallSeTime = now;
+
   seFall.currentTime = 0;
-  seFall.volume = 0.6;
-  seFall.play();
+  seFall.volume = 0.35;
+
+  seFall.play().catch(()=>{});
 }
 
 function draw(){
@@ -452,13 +513,14 @@ function draw(){
   drawPusher();
 
   const sorted =
-    [...objects].sort(
-      (a,b)=>a.y-b.y
+    [...medals].sort(
+      (a,b)=>
+      (a.y+a.z*4) - (b.y+b.z*4)
     );
 
-  for(const obj of sorted){
+  for(const m of sorted){
 
-    drawMedal(obj);
+    drawMedal(m);
   }
 
   drawPopups();
@@ -487,6 +549,7 @@ function drawBackground(){
     canvas.height
   );
 
+  // 太陽
   ctx.fillStyle = "#ffdd99";
 
   ctx.beginPath();
@@ -565,13 +628,16 @@ function drawMachine(){
 
 function drawPusher(){
 
+  const y =
+    148 + pusherDepth * 28;
+
   ctx.fillStyle = "#b84d5d";
 
   ctx.fillRect(
-    pusherX,
-    PUSHER_Y,
-    PUSHER_W,
-    PUSHER_H
+    60,
+    y,
+    240,
+    30
   );
 
   ctx.strokeStyle = "#f0c078";
@@ -579,10 +645,10 @@ function drawPusher(){
   ctx.lineWidth = 3;
 
   ctx.strokeRect(
-    pusherX,
-    PUSHER_Y,
-    PUSHER_W,
-    PUSHER_H
+    60,
+    y,
+    240,
+    30
   );
 
   ctx.fillStyle = "#fff2d8";
@@ -594,12 +660,15 @@ function drawPusher(){
 
   ctx.fillText(
     "PUSH",
-    pusherX + 55,
-    182
+    180,
+    y + 20
   );
 }
 
 function drawMedal(m){
+
+  const drawY =
+    m.y - m.z * 4;
 
   ctx.fillStyle = "#f5c96d";
 
@@ -607,7 +676,7 @@ function drawMedal(m){
 
   ctx.arc(
     m.x,
-    m.y,
+    drawY,
     m.r,
     0,
     Math.PI*2
@@ -631,7 +700,7 @@ function drawMedal(m){
   ctx.fillText(
     "M",
     m.x,
-    m.y + 4
+    drawY + 4
   );
 }
 
@@ -651,9 +720,9 @@ function drawPopups(){
     ctx.lineWidth = 4;
 
     ctx.font =
-      p.text === "GET!"
-      ? "30px DotGothic16"
-      : "38px DotGothic16";
+      p.text === "残響RUSH"
+      ? "38px DotGothic16"
+      : "30px DotGothic16";
 
     ctx.textAlign = "center";
 
