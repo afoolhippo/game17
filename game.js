@@ -170,11 +170,11 @@ function endGame(){
   let comment = "少しだけ遊ぶつもりだったのに・・・";
   let image = "result_bad.png";
 
-  if(score >= 40){
+  if(score >= 70){
     rank = "夕暮れJACKPOT";
     comment = "夕焼けが終わるまで、ずっとメダルを見ていた。";
     image = "result_good.png";
-  }else if(score >= 16){
+  }else if(score >= 140){
     rank = "夕暮れ常連";
     comment = "なんとなく帰れなかった。";
     image = "result_normal.png";
