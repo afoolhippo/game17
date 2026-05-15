@@ -1,4 +1,3 @@
-// game.js
 function setAppHeight(){
 
   const h = window.visualViewport
@@ -48,6 +47,7 @@ const GAME_URL = "https://afoolhippo.github.io/game17/";
 const MEDAL_R = 15;
 
 const TABLE_TOP = 175;
+const FIELD_TOP = TABLE_TOP + 22;
 const GET_LINE = 392;
 
 let medals = [];
@@ -65,11 +65,12 @@ let lastTime = 0;
 
 let pusherDepth = 0;
 let pusherForward = true;
+let prevPusherDepth = 0;
 
 let canDrop = true;
 let lastFallSeTime = 0;
 
-let startGrace = 0;
+let medalId = 0;
 
 function showScreen(screen){
   titleScreen.classList.remove("active");
@@ -91,29 +92,36 @@ function resetGame(){
   timeLeft = 30;
 
   pusherDepth = 0;
+  prevPusherDepth = 0;
   pusherForward = true;
+
   lastFallSeTime = 0;
-  startGrace = 35;
+  medalId = 0;
 
   updateHud();
 
+  // 初期メダル：疑似的な整列配置
+  // 物理衝突は使わず、見た目として詰まっている状態を作る
   const cols = 7;
   const rows = 6;
   const gapX = 34;
   const gapY = 27;
   const startX = 78;
-  const startY = TABLE_TOP + 25;
+  const startY = FIELD_TOP + 18;
 
   for(let row = 0; row < rows; row++){
     for(let col = 0; col < cols; col++){
       medals.push({
+        id: medalId++,
         x: startX + col * gapX + (Math.random() - 0.5) * 5,
         y: startY + row * gapY + (Math.random() - 0.5) * 4,
-        z: Math.random() * 0.9,
-        vx: 0,
-        vy: 0,
+        baseX: startX + col * gapX,
+        state: "field",
         r: MEDAL_R,
-        fresh: false
+        z: Math.random() * 0.8,
+        sway: Math.random() * Math.PI * 2,
+        age: 999,
+        pushed: 0
       });
     }
   }
@@ -174,7 +182,11 @@ function endGame(){
   }
 
   rankEl.textContent = rank;
-  resultImage.src = image;
+
+  if(resultImage){
+    resultImage.src = image;
+  }
+
   resultScoreEl.textContent = `GET ${score}枚`;
   resultCommentEl.textContent = comment;
 
@@ -189,16 +201,23 @@ function dropMedal(){
 
   setTimeout(()=>{
     canDrop = true;
-  }, 170);
+  }, 150);
+
+  const lanes = [78, 112, 146, 180, 214, 248, 282];
+  const lane = lanes[Math.floor(Math.random() * lanes.length)];
 
   medals.push({
-    x: 100 + Math.random() * 160,
-    y: TABLE_TOP - 18,
-    z: 3.8 + Math.random() * 1.4,
-    vx: (Math.random() - 0.5) * 0.06,
-    vy: 0.9,
+    id: medalId++,
+    x: lane + (Math.random() - 0.5) * 12,
+    y: 42,
+    baseX: lane,
+    targetY: FIELD_TOP + 18 + Math.random() * 28,
+    state: "fall",
     r: MEDAL_R,
-    fresh: true
+    z: 2.2 + Math.random() * 0.8,
+    sway: Math.random() * Math.PI * 2,
+    age: 0,
+    pushed: 0
   });
 }
 
@@ -218,22 +237,20 @@ function update(dt){
   updatePusher(dt);
   updateMedals(dt);
   updatePopups();
-
-  if(startGrace > 0){
-    startGrace -= dt;
-  }
 }
 
 function updatePusher(dt){
+  prevPusherDepth = pusherDepth;
+
   if(pusherForward){
-    pusherDepth += 0.021 * dt;
+    pusherDepth += 0.022 * dt;
 
     if(pusherDepth >= 1){
       pusherDepth = 1;
       pusherForward = false;
     }
   }else{
-    pusherDepth -= 0.014 * dt;
+    pusherDepth -= 0.015 * dt;
 
     if(pusherDepth <= 0){
       pusherDepth = 0;
@@ -243,66 +260,61 @@ function updatePusher(dt){
 }
 
 function updateMedals(dt){
-  const pushStrength = pusherForward ? pusherDepth : 0;
+  const pusherDelta = Math.max(0, pusherDepth - prevPusherDepth);
+
+  // プッシャーが手前へ出た分だけ、場のメダルを確実に少し前へ送る
+  const pushMove = pusherDelta * 34;
+
+  const fieldCount = medals.filter(m => m.state === "field").length;
+  const pressureBonus = Math.min(fieldCount / 80, 0.9);
 
   for(const m of medals){
+    m.age += dt;
+    m.sway += 0.035 * dt;
 
-    if(m.y < TABLE_TOP){
-      m.vy += 0.11 * dt;
+    if(m.state === "fall"){
+      m.y += (4.4 + Math.min(m.age * 0.08, 2.2)) * dt;
+      m.x += Math.sin(m.sway) * 0.18 * dt;
+
+      if(m.y >= m.targetY){
+        m.y = m.targetY;
+        m.state = "field";
+        m.z = 1.5;
+        m.age = 0;
+      }
     }else{
-      if(m.fresh){
-        // 上層メダルは少し早めに沈む
-        m.z *= 0.992;
+      // プッシャーによる前進
+      m.y += pushMove * (0.72 + pressureBonus);
 
-        if(m.z < 2.2){
-          m.fresh = false;
-        }
-      }else{
-        m.z *= 0.998;
+      // 常にごくわずかに前へ流す
+      m.y += 0.018 * dt;
+
+      // 投入数が多いほど少し流れやすくする
+      if(fieldCount > 46){
+        m.y += 0.012 * dt;
       }
-    }
 
-    m.y += m.vy * dt;
-    m.x += m.vx * dt;
+      if(fieldCount > 54){
+        m.y += 0.018 * dt;
+      }
 
-    m.vx *= 0.93;
-    m.vy *= 0.90;
+      // 横方向は揺れだけ。衝突計算はしない
+      const drift = Math.sin(m.sway + m.id * 0.4) * 1.4;
+      m.x += ((m.baseX + drift) - m.x) * 0.035 * dt;
 
-    const pushZoneTop = TABLE_TOP + 8;
-    const pushZoneBottom = TABLE_TOP + 98;
-
-    if(!m.fresh && m.y > pushZoneTop && m.y < pushZoneBottom){
-      m.vy += pushStrength * 0.075 * dt;
-    }
-
-    // つまって見える時間が長すぎるのを防ぐ、微小な夕暮れ流れ
-    if(!m.fresh && m.y > TABLE_TOP + 45){
-      m.vy += 0.006 * dt;
-    }
-
-    if(m.x < 42){
-      m.x = 42;
-      m.vx *= -0.08;
-    }
-
-    if(m.x > canvas.width - 42){
-      m.x = canvas.width - 42;
-      m.vx *= -0.08;
+      // 見た目用z
+      m.z *= 0.992;
+      if(m.z < 0.2) m.z = 0.2;
     }
   }
 
-  if(startGrace <= 0){
-    for(let i = 0; i < medals.length; i++){
-      for(let j = i + 1; j < medals.length; j++){
-        pushApart(medals[i], medals[j]);
-      }
-    }
-  }
+  // 重なりすぎ防止のため、描画上だけ縦に軽くばらす
+  normalizeFieldSpacing();
 
   for(let i = medals.length - 1; i >= 0; i--){
     const m = medals[i];
 
-    if(m.y > GET_LINE){
+    if(m.state === "field" && m.y > GET_LINE){
       score++;
       updateHud();
 
@@ -319,43 +331,22 @@ function updateMedals(dt){
   }
 }
 
-function pushApart(a, b){
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
+function normalizeFieldSpacing(){
+  const field = medals
+    .filter(m => m.state === "field")
+    .sort((a,b)=>a.y - b.y);
 
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const min = a.r + b.r - 2;
+  // 完全物理ではなく、詰まりすぎた時だけ少し前へ逃がす
+  for(let i = 1; i < field.length; i++){
+    const prev = field[i - 1];
+    const cur = field[i];
 
-  if(dist > 0 && dist < min){
-    const overlap = min - dist;
-    const nx = dx / dist;
-    const ny = dy / dist;
+    const sameLane = Math.abs(prev.baseX - cur.baseX) < 18;
+    const tooClose = Math.abs(prev.y - cur.y) < 12;
 
-    const force = overlap * 0.14;
-
-    a.x += nx * force * 0.45;
-    b.x -= nx * force * 0.45;
-
-    a.y += ny * force * 0.15;
-    b.y -= ny * force * 0.15;
-
-    a.vx *= 0.80;
-    b.vx *= 0.80;
-    a.vy *= 0.84;
-    b.vy *= 0.84;
-
-    if(!a.fresh && !b.fresh){
-      const frontPush = 0.006;
-
-      if(a.y > b.y){
-        a.y += frontPush;
-      }else{
-        b.y += frontPush;
-      }
+    if(sameLane && tooClose){
+      cur.y += 0.7;
     }
-
-    if(a.fresh) a.z = Math.max(a.z, 3.0);
-    if(b.fresh) b.z = Math.max(b.z, 3.0);
   }
 }
 
@@ -403,7 +394,7 @@ function draw(){
   drawPusher();
 
   const sorted = [...medals].sort((a,b)=>{
-    return (a.y - a.z * 3) - (b.y - b.z * 3);
+    return (a.y - a.z * 4) - (b.y - b.z * 4);
   });
 
   for(const m of sorted){
@@ -440,7 +431,7 @@ function drawMachine(){
   ctx.fillStyle = "#4a3e58";
   ctx.fillRect(50, TABLE_TOP, 260, 190);
 
-  // 下辺を描かず、手前に落ちる場所に見せる
+  // 下辺は描かず、手前へ落ちるフィールドに見せる
   ctx.strokeStyle = "#f0c078";
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -503,8 +494,8 @@ function drawMedal(m){
   ctx.textAlign = "center";
   ctx.fillText("M", m.x, drawY + 4);
 
-  if(m.fresh){
-    ctx.strokeStyle = "rgba(255,255,255,0.42)";
+  if(m.state === "fall"){
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(m.x - 3, drawY - 3, m.r - 5, Math.PI * 1.05, Math.PI * 1.55);
