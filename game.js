@@ -67,6 +67,9 @@ let pusherForward = true;
 let canDrop = true;
 let lastFallSeTime = 0;
 
+// 開始直後のメダル暴発を防ぐ猶予
+let startGrace = 0;
+
 function showScreen(screen){
   titleScreen.classList.remove("active");
   gameScreen.classList.remove("active");
@@ -89,19 +92,29 @@ function resetGame(){
   pusherDepth = 0;
   pusherForward = true;
   lastFallSeTime = 0;
+  startGrace = 80;
 
   updateHud();
 
-  for(let i = 0; i < 42; i++){
-    medals.push({
-      x: 60 + Math.random() * 240,
-      y: TABLE_TOP + 22 + Math.random() * 155,
-      z: Math.random() * 1.5,
-      vx: 0,
-      vy: 0,
-      r: MEDAL_R,
-      fresh: false
-    });
+  const cols = 7;
+  const rows = 6;
+  const gapX = 34;
+  const gapY = 28;
+  const startX = 78;
+  const startY = TABLE_TOP + 28;
+
+  for(let row = 0; row < rows; row++){
+    for(let col = 0; col < cols; col++){
+      medals.push({
+        x: startX + col * gapX + (Math.random() - 0.5) * 5,
+        y: startY + row * gapY + (Math.random() - 0.5) * 4,
+        z: Math.random() * 1.0,
+        vx: 0,
+        vy: 0,
+        r: MEDAL_R,
+        fresh: false
+      });
+    }
   }
 }
 
@@ -141,21 +154,18 @@ function endGame(){
 
   bgm.pause();
 
-  let rank = "夕暮れ部員";
-  let comment = "今日もメダルを落とした。";
+  let rank = "夕暮れ散財";
+  let comment = "少しだけ遊ぶつもりだった。";
 
-  if(score >= 35){
+  if(score >= 50){
     rank = "夕暮れJACKPOT";
     comment = "夕焼けが終わるまで、ずっとメダルを見ていた。";
-  }else if(score >= 24){
+  }else if(score >= 32){
     rank = "残響RUSH";
     comment = "チャリン…という音だけが残った。";
-  }else if(score >= 14){
+  }else if(score >= 16){
     rank = "ゲームコーナー常連";
     comment = "なんとなく帰れなかった。";
-  }else if(score >= 6){
-    rank = "寄り道";
-    comment = "少しだけ遊ぶつもりだった。";
   }
 
   rankEl.textContent = rank;
@@ -171,16 +181,17 @@ function dropMedal(){
 
   canDrop = false;
 
+  // 連打だけで半自動JACKPOTになりにくくする
   setTimeout(()=>{
     canDrop = true;
-  }, 120);
+  }, 180);
 
   medals.push({
-    x: 90 + Math.random() * 180,
-    y: 42,
-    z: 3.8 + Math.random() * 1.8,
-    vx: (Math.random() - 0.5) * 0.45,
-    vy: 0,
+    x: 100 + Math.random() * 160,
+    y: TABLE_TOP - 18,
+    z: 3.8 + Math.random() * 1.4,
+    vx: (Math.random() - 0.5) * 0.06,
+    vy: 0.8,
     r: MEDAL_R,
     fresh: true
   });
@@ -202,6 +213,10 @@ function update(dt){
   updatePusher(dt);
   updateMedals(dt);
   updatePopups();
+
+  if(startGrace > 0){
+    startGrace -= dt;
+  }
 }
 
 function updatePusher(dt){
@@ -227,48 +242,50 @@ function updateMedals(dt){
 
   for(const m of medals){
     if(m.y < TABLE_TOP){
-      m.vy += 0.12 * dt;
+      m.vy += 0.10 * dt;
     }else{
       if(m.fresh){
-        // 後から入れたメダルは上層に残り、少しずつ沈む
-        m.z *= 0.996;
+        // 沈み込みは演出寄り。物理に強く絡ませすぎない
+        m.z *= 0.997;
 
         if(m.z < 2.2){
           m.fresh = false;
         }
       }else{
-        m.z *= 0.998;
+        m.z *= 0.999;
       }
     }
 
     m.y += m.vy * dt;
     m.x += m.vx * dt;
 
-    m.vx *= 0.96;
-    m.vy *= 0.94;
+    m.vx *= 0.93;
+    m.vy *= 0.89;
 
-    // プッシャーが直接押すのは下層メダルだけ
     const pushZoneTop = TABLE_TOP + 8;
     const pushZoneBottom = TABLE_TOP + 92;
 
     if(!m.fresh && m.y > pushZoneTop && m.y < pushZoneBottom){
-      m.vy += pushStrength * 0.075 * dt;
+      m.vy += pushStrength * 0.04 * dt;
     }
 
     if(m.x < 42){
       m.x = 42;
-      m.vx *= -0.25;
+      m.vx *= -0.08;
     }
 
     if(m.x > canvas.width - 42){
       m.x = canvas.width - 42;
-      m.vx *= -0.25;
+      m.vx *= -0.08;
     }
   }
 
-  for(let i = 0; i < medals.length; i++){
-    for(let j = i + 1; j < medals.length; j++){
-      pushApart(medals[i], medals[j]);
+  // 開始直後だけ衝突を止めて、初期配置の暴発を防ぐ
+  if(startGrace <= 0){
+    for(let i = 0; i < medals.length; i++){
+      for(let j = i + 1; j < medals.length; j++){
+        pushApart(medals[i], medals[j]);
+      }
     }
   }
 
@@ -297,23 +314,37 @@ function pushApart(a, b){
   const dy = a.y - b.y;
 
   const dist = Math.sqrt(dx * dx + dy * dy);
-  const min = a.r + b.r - 1;
+  const min = a.r + b.r - 2;
 
   if(dist > 0 && dist < min){
-    const force = (min - dist) * 0.052;
+    const overlap = min - dist;
     const nx = dx / dist;
     const ny = dy / dist;
 
-    a.vx += nx * force;
-    b.vx -= nx * force;
+    const force = overlap * 0.14;
 
-    a.vy += ny * force * 2.2;
-    b.vy -= ny * force * 2.2;
+    // 弾かず、じわっと位置補正
+    a.x += nx * force * 0.45;
+    b.x -= nx * force * 0.45;
 
-    if(a.y < b.y){
-      b.vy += 0.035;
-    }else{
-      a.vy += 0.035;
+    a.y += ny * force * 0.12;
+    b.y -= ny * force * 0.12;
+
+    // 速度を殺す
+    a.vx *= 0.78;
+    b.vx *= 0.78;
+    a.vy *= 0.82;
+    b.vy *= 0.82;
+
+    // 下層同士だけ、ごくわずかに前へ
+    if(!a.fresh && !b.fresh){
+      const frontPush = 0.004;
+
+      if(a.y > b.y){
+        a.y += frontPush;
+      }else{
+        b.y += frontPush;
+      }
     }
 
     if(a.fresh) a.z = Math.max(a.z, 3.1);
@@ -401,7 +432,18 @@ function drawMachine(){
 
   ctx.fillStyle = "#4a3e58";
   ctx.fillRect(50, TABLE_TOP, 260, 190);
-  ctx.strokeRect(50, TABLE_TOP, 260, 190);
+
+  // メダル場は下辺を描かず、手前に落ちる感じにする
+  ctx.strokeStyle = "#f0c078";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(50, TABLE_TOP);
+  ctx.lineTo(310, TABLE_TOP);
+  ctx.moveTo(50, TABLE_TOP);
+  ctx.lineTo(50, TABLE_TOP + 190);
+  ctx.moveTo(310, TABLE_TOP);
+  ctx.lineTo(310, TABLE_TOP + 190);
+  ctx.stroke();
 
   ctx.fillStyle = "#6d5669";
   ctx.fillRect(35, 390, 290, 60);
@@ -409,7 +451,7 @@ function drawMachine(){
   ctx.fillStyle = "#ffd9a1";
   ctx.font = "18px DotGothic16";
   ctx.textAlign = "center";
-  ctx.fillText("GET ZONE", 180, 425);
+  ctx.fillText("↓↓ GET ↓↓", 180, 425);
 }
 
 function drawPusher(){
@@ -531,7 +573,7 @@ ${score}枚
 
 無料ブラウザゲーム
 「夕暮れメダル」
-https://afoolhippo.github.io/game17/
+${GAME_URL}
 
 #夕暮れメダル
 #カバゲーセン`;
