@@ -164,25 +164,11 @@ button{
 #gameCanvas{
   width:min(95vw,430px);
 
-  height:min(calc(var(--app-height) - 170px),560px);
+  height:min(calc(var(--app-height) - 160px),560px);
 
   border:4px solid #241d2f;
 
   image-rendering:pixelated;
-}
-
-.message{
-  width:min(95vw,430px);
-
-  height:24px;
-
-  margin:6px 0;
-
-  text-align:center;
-
-  color:#ffd7a8;
-
-  font-size:15px;
 }
 
 .mainBtn{
@@ -207,6 +193,8 @@ button{
 
 .dropBtn{
   width:min(90vw,360px);
+
+  margin-top:8px;
 
   background:
   linear-gradient(
